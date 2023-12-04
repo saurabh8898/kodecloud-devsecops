@@ -1,32 +1,48 @@
 pipeline {
-  agent any
+    agent { label 'maven' }
 
-  stages {
-      stage('Build Artifact') {
+    stages {
+        stage('Build Artifact') {
             steps {
-              sh "mvn clean package -DskipTests=true"
-              archive 'target/*.jar' 
+                script {
+                    // Use Maven Wrapper for clean build
+                    sh "./mvnw clean"
+                    
+                    // Build the package (skip tests for now)
+                    sh "./mvnw package -DskipTests=true"
+                    
+                    // Archive the JAR file
+                    archiveArtifacts 'target/*.jar'
+                }
             }
         }
-        stage('Unit test') {
+
+        stage('Unit Test') {
             steps {
-              sh "mvn test"       
-    }
-}
+                script {
+                    // Run Maven tests
+                    sh "./mvnw test"
+                }
+            }
+        }
+
         stage('Code Coverage') {
             steps {
-                // Run JaCoCo to collect code coverage
-                jacoco(execPattern: '**/target/classes', classPattern: '**/target/classes/**/*.class')
+                script {
+                    // Run JaCoCo to collect code coverage
+                    jacoco(execPattern: '**/target/classes', classPattern: '**/target/classes/**/*.class')
 
-                // Publish JaCoCo results
-                jacocoReport('**/*.exec')    
+                    // Publish JaCoCo results
+                    jacocoReport('**/*.exec')
+                }
+            }
+        }
     }
-}
-        post {
+
+    post {
         always {
             // Publish JaCoCo coverage report
             jacocoCoverage('50') // Set the desired coverage threshold
-  }
-}
-  }
+        }
+    }
 }
